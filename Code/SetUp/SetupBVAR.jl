@@ -14,7 +14,7 @@ Random.seed!(1234)
 println("BVAR Set-up > Manual settings")
 
 # Excel file to load
-data_file = "prova.xlsx";
+data_file = "test.xlsx";
 data_path = pwd()*"/Data/FinalData/"*data_file;
 
 # Put dates for the start/end of the sample 
@@ -22,7 +22,7 @@ start_date = "31/01/1984";
 end_date   = "31/12/2024";
 
 # Result Folder name
-results_folder = "prova"; # name folder with all the results
+results_folder = "test"; # name folder with all the results
 
 
 # ------------------------------------------------------------------------------

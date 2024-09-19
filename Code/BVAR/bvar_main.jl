@@ -75,11 +75,11 @@ function bvar_main(
     # Find the optimal parametrization of prior distribution using marginal 
     # distribution of the data 
     t, k       = size(Xm);
-    μ, σ, δ, ϵ = bvar_prior(Xm, prior, 1);
-    p, λ, τ, γ = bvar_opt_prior(Θ, Xm, μ, σ, δ);
+    μ, σ, δ, ϵ = bvar_minnesota_prior(Xm, prior, 1);
+    p, λ, τ, γ = bvar_opt_hyperprior(Θ, Xm, μ, σ, δ);
     println("BVAR > Hyperpriors > Results > p = $p / λ = $λ / τ = $τ / γ = $γ")
 
-    # Create the dummy observation for the optimal priors
+    # Create the dummy observation for the optimal hyperpriors
     println("BVAR > creation dummy observations")
     Θ₁    = Hyperparameter([λ], [τ], [γ], ε, [p], H, reps, burnin, max_try, update);
     yₛ, xₛ = bvar_dummies(λ, τ, γ, Θ.ε, Int64(p), k, δ, μ, σ);

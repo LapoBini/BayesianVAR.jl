@@ -1,4 +1,4 @@
-function bvar_prior(
+function bvar_minnesota_prior(
     y::Array{Float64,2},     # dataset 
     prior::Array{Float64,1}, # prior: 1 random wal, 0 white noise 
     p::Int64                 # lag-length: used to compute unconditional mean 

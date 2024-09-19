@@ -1,4 +1,4 @@
-function bvar_opt_prior(
+function bvar_opt_hyperprior(
     Θ::Hyperparameter,
     Xm::Array{Float64,2},
     μ::Array{Float64,1},

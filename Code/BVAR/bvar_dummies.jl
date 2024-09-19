@@ -94,7 +94,7 @@ function bvar_dummies(
 
     # 3 - Dummy-Initial-Observation Prior 
     yₐ₃ = μ'./γ;
-    xₐ₃ = [kron(ones(1,p),yₐ₃) 1]./γ;
+    xₐ₃ = [kron(ones(1,p),yₐ₃) 1 ./γ];
 
     # Stack together 
     yₐ = vcat(yₐ,yₐ₂,yₐ₃)

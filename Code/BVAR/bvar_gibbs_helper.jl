@@ -126,7 +126,7 @@ function bvar_IWRD(
     # Draw from Inverted Wishert Distribution 𝛹 ∼ iW(S,ν) S is the (kxk) scale 
     # matrix and ν are the degrees of freedom. 𝛹 = (∑ₜ wᵢwᵢ')⁻¹ with wᵢ∼N(0,S)
     #
-    # The Inverse Wishart distribution could be seen as multivariate verion of 
+    # The Inverse Wishart distribution could be seen as multivariate version of 
     # the inverse gamma distribution (used for variance in univariate case) and
     #  it is a conjugate prior for the var/cov matrix of a multivariate normal.
     #

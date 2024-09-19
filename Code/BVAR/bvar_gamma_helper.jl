@@ -16,7 +16,7 @@ function sum_log_gamma(
     # Compute sum of log(Γₖ(v)) with Γₖ(v) multivariate gamma function with K equals 
     # to the number of variables in the model.
     #
-    # Give, log(Γₖ(v)) = k(k-1)⋅log(π) + ∑ᵢᵏ log(Γ(v+(1-i)/2)) where Γ(v+(1-i)/2) is
+    # Give, log(Γₖ(v)) = k(k-1)⋅log(π) + ∑ᵢᵏ log(Γ(v+(1-i)/2)) where Γ((v+1-i)/2) is
     # the univariate gamma function. This function compute the sum over the 
     # univariate log-gamma γ = ∑ᵢᵏ log(Γ(v+(1-i)/2))
     # ------------------------------------------------------------------------------
@@ -43,7 +43,7 @@ function log_multivariate_gamma(
     # Compute the log of the multivariate (of order k) gamma function: log Γₖ(v)
     # --------------------------------------------------------------------------
 
-    # log(Γₖ(v)) = c + γ where c = k(k-1)⋅log(π) and γ = ∑ᵢᵏ log(Γ(v+(1-i)/2))
+    # log(Γₖ(v)) = c + γ where c = k(k-1)⋅log(π) and γ = ∑ᵢᵏ log(Γ((v+1-i)/2))
     c  = (k*(k-1)/4)*log(pi)
     γ  = sum_log_gamma(k, v)
     c += γ

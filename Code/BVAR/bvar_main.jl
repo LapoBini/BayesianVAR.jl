@@ -66,9 +66,8 @@ function bvar_main(
     # --------------------------------------------------------------------------
     # 2 - Optimization Hyperpriors 
     # --------------------------------------------------------------------------
-    # We are going to chose the hyperprior (or hyperparameters) which maximize 
-    # the marginal likelihood of the data given the priors and their 
-    # parametrization which depends on the hyperpriors. 
+    # We are going to chose the hyperpriors (or hyperparameters) which maximize 
+    # the marginal likelihood of the data given the priors. 
     println("BVAR > Hyperpriors > Optimization marginal likelihood")
     Θ  = Hyperparameter(λ, τ, γ, ε, p, H, reps, burnin, max_try, update);
     Xm = data[:,2:end] |> any2float;

@@ -16,6 +16,7 @@ function bvar_main(
     # Extra
     predictive_density = false,
     check_stationarity = true,
+    years              = 5,
     # Event study with external instrument shock:
     name_iv_shock   = "Oil",
     forecast_origin = []     # ["30/06/2021"; "31/01/2021"]
@@ -59,7 +60,7 @@ function bvar_main(
     base_frq = readdata_haver(data_path, start_date, end_date);
 
     # Horizon for Impulse Response Functions (+1 because shock at time 0)
-    base_frq == "m" ? Hᵢ = 61 : Hᵢ = 21;
+    base_frq == "m" ? Hᵢ = (years * 12) + 1 : Hᵢ = (years * 4) + 1;
     H = Hᵢ - 1;
 
 

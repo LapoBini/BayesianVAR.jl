@@ -69,7 +69,6 @@ function plot_IRFs_bvar(
             IR[:,j]   = mapslices(u->quantile(u, 0.5), IRF[1:Hᵢ,j,:,pos_aux[i]], dims = 2);
         end
 
-        println("BVAR > Structural Analysis > Plot results > IRFs")
         b₀ᵢ = IR[1,pos_S[i]];
         for j in 1:k 
             name_p = filter(x -> !isspace(x), var_names[j]);

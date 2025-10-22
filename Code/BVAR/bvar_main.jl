@@ -115,13 +115,14 @@ function bvar_main(
                                                    historical_decomp  = historical_decomp);
 
         # Documentation
-        println("BVAR > Structural Analysis > Plot IRFs")
+        println("BVAR > Documentation > Plot Structural IRFs")
         plot_IRFs_bvar(IRF, data, H, name_s, pos_policy, base_frq, res_path);
 
         if !isempty(historical_decomp)
-            println("BVAR > Structural Analysis > Plot Historical Decomposition")
+            println("BVAR > Documentation > Plot Historical Decomposition")
             plot_HIST_bvar(IRF, HIS, data, H, name_s, p, pos_policy, base_frq, 
-                           results_folder, transf, ref_dates)
+                           results_folder, transf, ref_dates, historical_decomp,
+                           tickers)
         end
     end
 
@@ -158,14 +159,3 @@ function bvar_main(
         plot_IRFs_bvar(IRF, data, H, [name_iv_shock], pos_shock, base_frq, res_path);
     end
 end
-
-
-# --------------------------------------------------------------------------
-# MANUAL RUN VARIABLES:
-#=--------------------------------------------------------------------------
-λ=[0.1, 1, 10.0,100.0]; τ=λ.*10; γ=λ.*10; ε=0.0001; p=[2,3,4,5,6,7,8,12]; H=60; 
-burnin=2000; max_try=100; update=1000; reis=false; 
-reps=5000; save_transformed=false; sign_restriction=false; Hᵢ=12*5;
-predictive_density=false; check_stationarity=true; frequency = "Month";
-forecat_origin = []; name_iv_shock = "Oil";
-# ------------------------------------------------------------------------=# 

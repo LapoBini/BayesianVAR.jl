@@ -1,15 +1,17 @@
 function plot_HIST_bvar(
-    IRF::Array{Float64,4},  # Impulse Responses
-    HIS::Array{Float64,3},  # Historical Decomposition
-    data::DataFrame,        # Vector with data
-    H::Int64,               # Forecast horizon IRFs
-    name_s::Vector{Any},    # Name of the shock
-    p,                      # lag length of the VAR 
-    pos_policy,             # Vector with position structural shocks
-    base_frq::String,       # Frequency of the BVAR
-    results_folder::String, # where to put results
-    transf::Matrix{Bool},   # Transformation to rescale Hist Dec
-    ref_dates::Vector{Date} # In sample dates 
+    IRF::Array{Float64,4},   # Impulse Responses
+    HIS::Array{Float64,3},   # Historical Decomposition
+    data::DataFrame,         # Vector with data
+    H::Int64,                # Forecast horizon IRFs
+    name_s::Vector{Any},     # Name of the shock
+    p,                       # lag length of the VAR 
+    pos_policy,              # Vector with position structural shocks
+    base_frq::String,        # Frequency of the BVAR
+    results_folder::String,  # where to put results
+    transf::Matrix{Bool},    # Transformation to rescale Hist Dec
+    ref_dates::Vector{Date}, # In sample dates 
+    historical_decomp,       # Variables that I want the hist decomp
+    tickers::Vector{Any}
     )
 
     # --------------------------------------------------------------------------
@@ -80,63 +82,84 @@ function plot_HIST_bvar(
         # ------------------------------------------------------------------
         # Plot the contribution to the instrumented variables
         # ------------------------------------------------------------------
-        # Allocate confidence interval
-        pos = findall(pos_policy .== kk)[1]
-        Ω   = mapslices(u -> quantile(u, 0.5), IRF[:,pos,:,pos], dims = 2);
-        cu  = mapslices(u->quantile(u, 1.0.-α./2), IRF[:,pos,:,pos], dims = 2);
-        cl  = mapslices(u->quantile(u, α./2), IRF[:,pos,:,pos], dims = 2);
-        
-        # Obtain BC component by rescaling by Real GDP IRFs
-        (transf[pos,1] == 1) .& (transf[pos,2] == 0) .& (transf[pos,3] == 0) ? scale = 100 : scale = 1;
-        T    = size(e, 1);
-        irfᵢ = kron(e', Ω.*scale); 
-        BC   = zeros(T);
+        # Initialize excel file 
+        intro     = [["";""] [""; ""]];
+        est_HIST  = DataFrame(intro, Symbol.([" ",""]))
+        res_excel = res_path*"/$(replace(name_s[1], " "=>""))_HIST_.xlsx";
 
-        for t in 1:T
-            aux = [irfᵢ[t-(i-1),i] for i in 1:t]
-            BC[t] = sum(aux)
+        # Allocate empty spreadsheet
+        XLSX.openxlsx(res_excel, mode = "w") do file
+                    
+            # Save FEVD 
+            XLSX.rename!(file[1], "EMPTY")
+            XLSX.writetable!(file[1], est_HIST)
+
         end
 
-        # Ontain confidence interval (based on the median response)
-        AUX = HIS[:,:,kk]
-        BCα = zeros(T,size(AUX,2))
+        # Find position shock of interest
+        pos = findall(pos_policy .== kk)[1]
 
-        for i in 1:size(AUX,2)
-            irfᵢ = kron(AUX[:,i]', Ω.*scale); 
+        for hd in 1:length(historical_decomp)
+            ii  = findall(tickers .== historical_decomp[hd])[1];
+            Ω   = mapslices(u -> quantile(u, 0.5), IRF[:,ii,:,pos], dims = 2);
+            cu  = mapslices(u->quantile(u, 1.0.-α./2), IRF[:,ii,:,pos], dims = 2);
+            cl  = mapslices(u->quantile(u, α./2), IRF[:,ii,:,pos], dims = 2);
+            
+            # Obtain BC component by rescaling by Real GDP IRFs
+            (transf[ii,1] == 1) .& (transf[ii,2] == 0) .& (transf[ii,3] == 0) ? scale = 100 : scale = 1;
+            T    = size(e, 1);
+            irfᵢ = kron(e', Ω.*scale); 
+            BC   = zeros(T);
+
             for t in 1:T
                 aux = [irfᵢ[t-(i-1),i] for i in 1:t]
-                BCα[t,i] = sum(aux)
+                BC[t] = sum(aux)
             end
-        end
 
-        cu = mapslices(u -> quantile(u, 1.0.-α./2), BCα, dims = 2);
-        cl = mapslices(u -> quantile(u, α./2), BCα, dims = 2);
+            # Ontain confidence interval (based on the median response)
+            AUX = HIS[:,:,kk]
+            BCα = zeros(T,size(AUX,2))
 
+            for i in 1:size(AUX,2)
+                irfᵢ = kron(AUX[:,i]', Ω.*scale); 
+                for t in 1:T
+                    aux = [irfᵢ[t-(i-1),i] for i in 1:t]
+                    BCα[t,i] = sum(aux)
+                end
+            end
 
-        Plots.plot(size = (700,500), ytickfontsize  = 13, xtickfontsize  = 13,
-                    xguidefontsize = 15, legendfontsize = 13, boxfontsize = 15,
-                    framestyle = :box, yguidefontsize = 15, titlefontsize = 18);
-        for l in 1:length(α)
-            Plots.plot!(data_aux, cl[:,l], fillrange = cu[:,l], lw = 1, alpha = c[l], 
-                        color = "deepskyblue1", label = "")
-        end
-        hline!([0], color = "black", lw = 1, label = nothing)
-        Plots.plot!(data_aux, BC[:], lw = 3, color = "black", label = "")
-        Plots.plot!(ylabel = "", title = name_s[kk]*" Cycle",
-                    left_margin = 1Plots.mm, right_margin = 1Plots.mm,
-                    bottom_margin = 1Plots.mm, top_margin = 1Plots.mm,
-                    xticks = (ticks,tck_n), xlims = (ticks[1], end_tick))
-        Plots.savefig(res_path*"/$(name_s[kk])_cycle.pdf")
+            # Confidence interval historical decomposition
+            cu = mapslices(u -> quantile(u, 1.0.-α./2), BCα, dims = 2);
+            cl = mapslices(u -> quantile(u, α./2), BCα, dims = 2);
 
-        # Save file with cycle component 
-        aux_df = DataFrame([BC cl cu], 
-                           Symbol.("cycle" .* [""; string.(([1.0.-α./2; α./2] .|> u->round(u, digits = 2)))]))
-        # Write excel file 
-        XLSX.openxlsx(res_path*"/$(name_s[kk])_cycle.xlsx", mode="w") do file
-                
-            # Save historical reconstruction
-            XLSX.rename!(file[1], "cycle")
-            XLSX.writetable!(file[1], aux_df)
+            # Plot
+            name_p = "$(replace(name_s[1], " "=>""))_$(historical_decomp[hd])"
+            Plots.plot(size = (700,500), ytickfontsize  = 13, xtickfontsize  = 13,
+                        xguidefontsize = 15, legendfontsize = 13, boxfontsize = 15,
+                        framestyle = :box, yguidefontsize = 15, titlefontsize = 18);
+            for l in 1:length(α)
+                Plots.plot!(data_aux, cl[:,l], fillrange = cu[:,l], lw = 1, alpha = c[l], 
+                            color = "deepskyblue1", label = "")
+            end
+            hline!([0], color = "black", lw = 1, label = nothing)
+            Plots.plot!(data_aux, BC[:], lw = 3, color = "black", label = "")
+            Plots.plot!(ylabel = "", title = names(data)[ii+1],
+                        left_margin = 1Plots.mm, right_margin = 1Plots.mm,
+                        bottom_margin = 1Plots.mm, top_margin = 1Plots.mm,
+                        xticks = (ticks,tck_n), xlims = (ticks[1], end_tick))
+            Plots.savefig(res_path*"/$(name_p).pdf")
+
+            # Save file with cycle component 
+            col_names_excel = "Hist" .* [""; string.(([1.0.-α./2; α./2] .|> u->round(u, digits = 2)))]
+            aux_df = DataFrame([BC cl cu], Symbol.(col_names_excel))
+
+            # Open excel file and add extra spreadsheet
+            XLSX.openxlsx(res_excel, mode = "rw") do file
+
+                # Add extra sheet 
+                sheet = XLSX.addsheet!(file, historical_decomp[hd]);
+                XLSX.writetable!(sheet, aux_df)
+            end
         end
     end
 end

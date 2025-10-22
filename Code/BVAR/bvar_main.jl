@@ -19,7 +19,9 @@ function bvar_main(
     years              = 5,
     # Event study with external instrument shock:
     name_iv_shock   = "Oil",
-    forecast_origin = []     # ["30/06/2021"; "31/01/2021"]
+    forecast_origin = [],    # ["30/06/2021"; "31/01/2021"]
+    # Run historical decomposition for sign restriction 
+    historical_decomp = [] # Put tickers for the series you want to do historical decomposition 
     )
 
     # --------------------------------------------------------------------------
@@ -51,18 +53,16 @@ function bvar_main(
     start_s = DateTime(start_date, "dd/mm/yyyy");
     end_s   = DateTime(end_date, "dd/mm/yyyy");
 
-
     # --------------------------------------------------------------------------
     # 1 - Load Dataset 
     # --------------------------------------------------------------------------
     println("BVAR > Read Data > Loading Dataset")
     data, ref_dates, tickers, prior, sign_s, name_s, instrument, pos_policy, 
-    base_frq = readdata_haver(data_path, start_date, end_date);
+    base_frq, transf = readdata_haver(data_path, start_date, end_date);
 
     # Horizon for Impulse Response Functions (+1 because shock at time 0)
     base_frq == "m" ? Hᵢ = (years * 12) + 1 : Hᵢ = (years * 4) + 1;
     H = Hᵢ - 1;
-
 
     # --------------------------------------------------------------------------
     # 2 - Optimization Hyperpriors 
@@ -84,7 +84,6 @@ function bvar_main(
     println("BVAR > creation dummy observations")
     Θ₁    = Hyperparameter([λ], [τ], [γ], ε, [p], H, reps, burnin, max_try, update);
     yₛ, xₛ = bvar_dummies(λ, τ, γ, Θ.ε, Int64(p), k, δ, μ, σ);
-
 
     # --------------------------------------------------------------------------
     # 3 - Structural Analysis: Sign Restrictions
@@ -110,13 +109,20 @@ function bvar_main(
 
         # Estimation
         println("BVAR > Structural Analysis > Sign Identification")
-        PD, IRF, valid_draw = bvar_sign_gibbs(Θ₁, data, yₛ, xₛ, Hᵢ, sign_s, pos_policy,
-                                              check_stationarity = check_stationarity,
-                                              predictive_density = predictive_density);
+        PD, IRF, HIS, valid_draw = bvar_sign_gibbs(Θ₁, data, yₛ, xₛ, Hᵢ, sign_s, pos_policy,
+                                                   check_stationarity = check_stationarity,
+                                                   predictive_density = predictive_density,
+                                                   historical_decomp  = historical_decomp);
 
         # Documentation
-        println("BVAR > Structural Analysis > Plot results")
-        bvar_documentation(IRF, data, H, name_s, pos_policy, base_frq, res_path);
+        println("BVAR > Structural Analysis > Plot IRFs")
+        plot_IRFs_bvar(IRF, data, H, name_s, pos_policy, base_frq, res_path);
+
+        if !isempty(historical_decomp)
+            println("BVAR > Structural Analysis > Plot Historical Decomposition")
+            plot_HIST_bvar(IRF, HIS, data, H, name_s, p, pos_policy, base_frq, 
+                           results_folder, transf, ref_dates)
+        end
     end
 
 
@@ -149,7 +155,7 @@ function bvar_main(
 
         # Documentation
         println("BVAR > Structural Analysis > Plot results")
-        bvar_documentation(IRF, data, H, [name_iv_shock], pos_shock, base_frq, res_path);
+        plot_IRFs_bvar(IRF, data, H, [name_iv_shock], pos_shock, base_frq, res_path);
     end
 end
 

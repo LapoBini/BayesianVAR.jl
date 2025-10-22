@@ -189,6 +189,6 @@ function readdata_haver(
     end
 
     return transf_data, ref_dates, tickers, prior, sign_s, name_s, 
-           instrument, pos_policy, base_frq
+           instrument, pos_policy, base_frq, transf
 
 end

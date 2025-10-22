@@ -8,7 +8,8 @@ function bvar_sign_gibbs(
     pos_policy::Vector{Float64};  # position of the shocked variables for each shock
     predictive_density = false,   # calculate predictive density 
     check_stationarity = true,    # test stationarity of the draw 
-    max_draw           = 120000   # max. n. of draws of standart normal for sign id. 
+    max_draw           = 120000,  # max. n. of draws of standart normal for sign id. 
+    historical_decomp  = []
     )
 
     # ------------------------------------------------------------------------------
@@ -30,22 +31,27 @@ function bvar_sign_gibbs(
     tₐ  = size(yₛ,1);
     ν   = t + tₐ;
 
-    # Allocate results
+    # IRFs for how long ? If I want the historical decomposition I need much
+    # longer response. 
+    isempty(historical_decomp) ? aux_t = Hᵢ : aux_t = t;
+
+    # Allocate results. I will save IRFs to all the shocks, not just the one of 
+    # Interest to later compute other objects 
     PD  = zeros(H, k, reps-burnin);
-    IRF = zeros(Hᵢ, k, reps-burnin, k);
+    IRF = zeros(aux_t, k, reps-burnin, k);
+    HIS = zeros(t, reps-burnin, n_shock); 
 
     # Variables for the posteriors 
     Y = [y; yₛ];
     X = [x; xₛ]; 
 
-
     # ------------------------------------------------------------------------------
     # POSTERIOR DISTRIBUTION
     # ------------------------------------------------------------------------------
-    Ωₓ⁻¹ = inv(X'*X);
-    A    = Ωₓ⁻¹*(X'*Y); # Reduced form coefficient (mean of posterior distribution)
-    u    = Y - X*A;     # residual using posterior mean of coefficients 
-    𝛹    = (u' * u)./ν; # Scale matrix for Inverse wishart (it will be updated)
+    Ωₓ⁻¹ = Matrix(inv(Symmetric(X'*X))); # Enforce Positive definiteness 
+    A    = Ωₓ⁻¹*(X'*Y);                  # Reduced form coefficient (mean of posterior)
+    u    = Y - X*A;                      # residual using posterior mean of β
+    𝛹    = (u' * u)./ν;                  # Scale for Inverse wishart )updated by gibbs)
 
     # Iterators, progress and index of iterations post-burnin with valid B₀ draws
     jgibbs     = 0;
@@ -57,7 +63,6 @@ function bvar_sign_gibbs(
     βₐ = deepcopy(A[:]); # fixed parameter (posterior mean of coefficient)
     β₁ = deepcopy(A[:]); # changing one (it will be updated with random draws)
     B₀ = [];             # used for sign restriction 
-
 
     # ------------------------------------------------------------------------------
     # GIBBS SAMPLING
@@ -85,15 +90,14 @@ function bvar_sign_gibbs(
         # from the wishart distribution with scale parameter the inverse of the 
         # original scale matrix for IW, to then take the inverse of the draw. 
         b  = reshape(β₁, k*lags+1, k); # Coefficient after draw matrix form
-        uⱼ = Y - X*b;                 # residuals 
-        S  = inv(uⱼ' * uⱼ);           # Inverse of Var/Cov matrix residual
-        𝛹  = bvar_IWRD(S, ν);         # S = scale matrix, ν = degrees of freedom 
+        uⱼ = Y - X*b;                  # residuals 
+        S  = inv(uⱼ' * uⱼ);            # Inverse of Var/Cov matrix residual
+        𝛹  = bvar_IWRD(S, ν);          # S = scale matrix, ν = degrees of freedom 
 
         # Sometimes the scale matrix is defined as S = Σ₀ + (Yₜ - Xₜ⋅A₁)'(Yₜ - Xₜ⋅A₁)
         # but here we are using dummy variables, so all together and not the sum of 
         # prior variance plus var/cov of reduced form residuals:
         # S = (Y⁺ - X⁺A₁)'(Y⁺ - X⁺A₁) where Y⁺ and X⁺ appended data
-
 
         # --------------------------------------------------------------------------
         # POST BURNIN PERIOD 
@@ -118,7 +122,7 @@ function bvar_sign_gibbs(
             flag     = 0;            # switching to 1 when all conditions are met
 
             # Cholesky decomposition of variance/covariance matrix 
-            B₀ = Matrix(cholesky(Hermitian(𝛹)).U);
+            B₀ = Matrix(cholesky(Hermitian(𝛹)).U); # P in Hamilton (2024) book 
 
             # Loop until all restrictions are satisfied
             while flag < 1 && rep_sign <= max_draw
@@ -126,15 +130,15 @@ function bvar_sign_gibbs(
                 # Draw a candidate matrix of contemporaneous restrictions 
                 Q, R        = qr(randn(k,k)); # QR Factorization of a draw N(0, Iₖ)
                 B̃₀          = Q * B₀;         # Matrix of contemporaneous shock Aˢ₀
-                ϕ[1:k,1:k]  = B̃₀;            # Allocate the candidate  
+                ϕ[1:k,1:k]  = B̃₀;             # Allocate the candidate  
 
                 # Check if candidate matrix Aˢ₀ satisfies all the restrictions 
                 for kk in 1:n_shock
  
                     # Position restriction and their signs
-                    pos      = findall(pos_policy .== kk)[1];
-                    rstr_pos = findall(.!isnan.(sign_s[:,kk]));
-                    rstr_sgn = sign_s[rstr_pos,kk];
+                    pos      = findall(pos_policy .== kk)[1];   # Find Position "instrumented" var
+                    rstr_pos = findall(.!isnan.(sign_s[:,kk])); # Find variables with restrictions
+                    rstr_sgn = sign_s[rstr_pos,kk];             # sign_s multiple columns if multiple shocks
 
                     # Pick the restricted coefficient and n. of restrictions 
                     b₀ = B̃₀[pos, rstr_pos]
@@ -144,9 +148,9 @@ function bvar_sign_gibbs(
                     # restrictions specified for a given shock. The elseif check 
                     # if they meet the restrictions with the reversed signs.
                     if sum(sign.(b₀ .* rstr_sgn)) .== r
-                        rstr_met += 1
+                        rstr_met  += 1
                     elseif sum(sign.(b₀ .* rstr_sgn)) .== -r
-                        rstr_met += 1
+                        rstr_met  += 1
                         ϕ[1:k,1:k] = -B̃₀
                     end
                 end
@@ -165,7 +169,8 @@ function bvar_sign_gibbs(
             # ----------------------------------------------------------------------
             # Compute response for each column of the matrix of contemporaneous 
             # response B₀ (we will need for the Forecast Error Variance Decomposition)
-            # but ONLY IF the draw of B₀ was succesful
+            # but ONLY IF the draw of B₀ was succesful. Then I will later select the 
+            # IRFs related to the shock which has been identified 
             if flag == 1 
                 for kk in 1:k
 
@@ -173,14 +178,14 @@ function bvar_sign_gibbs(
                     B₀ = (ϕ[kk,:])' |> Array{Float64,2};
 
                     # Pre-allocate memory and create one unit shock, Hᵢ horizon IRFs
-                    ŷ = zeros(lags+Hᵢ, k); # Save dynamic of the variables
-                    ε = zeros(lags+Hᵢ, 1); # sequence of shocks (all zeros except h = 0)
+                    ŷ = zeros(lags+aux_t, k); # Save dynamic of the variables
+                    ε = zeros(lags+aux_t, 1); # sequence of shocks (all zeros except h = 0)
                     ε[lags+1] = 1;         # shock to the policy measure at h = 0
 
                     # System is stationary, we consider deviation from steady state and
                     # before h = 0 the system was in steady state (variables were 0). For
                     # this reason we can also eliminate the intercept 
-                    for tt = lags+1:Hᵢ+lags
+                    for tt = lags+1:aux_t+lags
                         x̂ = Array{Float64,2}(undef, lags, k)
                         for ji = 1:lags
                             x̂[ji,:] = ŷ[tt-ji,:]
@@ -190,7 +195,22 @@ function bvar_sign_gibbs(
                     end
 
                     # Allocate all the results
-                    IRF[:,:,jgibbs,kk] = view(ŷ, lags+1:Hᵢ+lags, :)
+                    IRF[:,:,jgibbs,kk] = view(ŷ, lags+1:aux_t+lags, :)
+                end
+
+                # Generate the history of structural shock for each variable 
+                for kk in 1:n_shock
+
+                    # Select the raw with structural magnitude 
+                    pos = findall(pos_policy .== kk)[1];
+                    h₁  = ϕ[pos,:];
+
+                    # Obtain the series of structural shock u
+                    λ = ((h₁' * inv(𝛹))./(h₁' * inv(𝛹) * h₁))';
+                    U = uⱼ[1:t,:] * λ;
+
+                    # Save results 
+                    HIS[:,jgibbs,kk] = U;
                 end
             
                 # Valid draw index - repetition of post-burnin with valid B₀
@@ -200,6 +220,6 @@ function bvar_sign_gibbs(
         end
     end
 
-    return PD, IRF, valid_draw
+    return PD, IRF, HIS, valid_draw
 
 end

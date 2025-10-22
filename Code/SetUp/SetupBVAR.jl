@@ -14,16 +14,15 @@ Random.seed!(1234)
 println("BVAR Set-up > Manual settings")
 
 # Excel file to load
-data_file = "test.xlsx";
+data_file = "data_BVAR.xlsx";
 data_path = pwd()*"/Data/FinalData/"*data_file;
 
 # Put dates for the start/end of the sample 
-start_date = "31/01/1984";
-end_date   = "31/12/2024";
+start_date = "31/03/1960";
+end_date   = "31/12/2023";
 
 # Result Folder name
-results_folder = "test"; # name folder with all the results
-
+results_folder = "bvar_demand"; # name folder with all the results
 
 # ------------------------------------------------------------------------------
 # 3 - Auxiliary Functions
@@ -31,7 +30,6 @@ results_folder = "test"; # name folder with all the results
 println("BVAR Set-up > Build auxiliary functions")
 eye(x::Int) = Array{Float64,2}(I, x, x);
 const j2dt = Dates.julian2datetime;
-
 
 # ------------------------------------------------------------------------------
 # 4 - Load Toolbox Functions 
@@ -44,7 +42,6 @@ for i in fun
     i[end-2:end] == ".jl" ? include(dir*"/"*i) : nothing; 
 end
 
-
 # ------------------------------------------------------------------------------
 # 5 - Load Data Section Functions 
 # ------------------------------------------------------------------------------
@@ -56,9 +53,18 @@ for i in fun
     i[end-2:end] == ".jl" ? include(dir*"/"*i) : nothing; 
 end
 
+# ------------------------------------------------------------------------------
+# 6 - Load Plot Functions 
+# ------------------------------------------------------------------------------
+println("BVAR Set-up > Load functions in Plots & Tables")
+dir = pwd()*"/Code/PlotsTables";
+fun = readdir(dir);
+for i in fun
+    i[end-2:end] == ".jl" ? include(dir*"/"*i) : nothing; 
+end;
 
 # ------------------------------------------------------------------------------
-# 5 - Load Data Section Functions 
+# 7 - Load BVAR Functions 
 # ------------------------------------------------------------------------------
 println("BVAR Set-up > Load functions in BVAR")
 dir = pwd()*"/Code/BVAR";

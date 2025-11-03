@@ -15,7 +15,7 @@ function plot_HIST_bvar(
     )
 
     # --------------------------------------------------------------------------
-    # PLOT IRF AND FEVD, Author: Lapo Bini, lbini@ucsd.edu
+    # Plot Historical Decomposition, Author: Lapo Bini, lbini@ucsd.edu
     # -------------------------------------------------------------------------- 
 
     # Create Results folder 
@@ -151,7 +151,7 @@ function plot_HIST_bvar(
 
             # Save file with cycle component 
             col_names_excel = "Hist" .* [""; string.(([1.0.-α./2; α./2] .|> u->round(u, digits = 2)))]
-            aux_df = DataFrame([BC cl cu], Symbol.(col_names_excel))
+            aux_df = DataFrame([data_aux BC cl cu], Symbol.(["date"; col_names_excel]))
 
             # Open excel file and add extra spreadsheet
             XLSX.openxlsx(res_excel, mode = "rw") do file

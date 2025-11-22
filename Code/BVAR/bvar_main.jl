@@ -19,9 +19,10 @@ function bvar_main(
     years              = 5,
     # Event study with external instrument shock:
     name_iv_shock   = "Oil",
-    forecast_origin = [],    # ["30/06/2021"; "31/01/2021"]
+    forecast_origin = [],     # ["30/06/2021"; "31/01/2021"]
     # Run historical decomposition for sign restriction 
-    historical_decomp = [] # Put tickers for the series you want to do historical decomposition 
+    historical_decomp = [],   # Put tickers for the series you want to do historical decomposition 
+    trend_variables   = false # Compute deterministic part of the trend 
     )
 
     # --------------------------------------------------------------------------
@@ -109,10 +110,12 @@ function bvar_main(
 
         # Estimation
         println("BVAR > Structural Analysis > Sign Identification")
-        PD, IRF, HIS, valid_draw = bvar_sign_gibbs(Θ₁, data, yₛ, xₛ, Hᵢ, sign_s, pos_policy,
-                                                   check_stationarity = check_stationarity,
-                                                   predictive_density = predictive_density,
-                                                   historical_decomp  = historical_decomp);
+        PD, IRF, HIS, TR, 
+        valid_draw = bvar_sign_gibbs(Θ₁, data, yₛ, xₛ, Hᵢ, sign_s, pos_policy,
+                                     check_stationarity = check_stationarity,
+                                     predictive_density = predictive_density,
+                                     historical_decomp  = historical_decomp,
+                                     trend_variables    = trend_variables);
 
         # Documentation
         println("BVAR > Documentation > Plot Structural IRFs")

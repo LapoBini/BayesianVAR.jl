@@ -9,11 +9,12 @@ function bvar_sign_gibbs(
     predictive_density = false,   # calculate predictive density 
     check_stationarity = true,    # test stationarity of the draw 
     max_draw           = 120000,  # max. n. of draws of standart normal for sign id. 
-    historical_decomp  = []
+    historical_decomp  = [],      # Tickers of the series you want to do or empty
+    trend_variables    = false    # true or false 
     )
 
     # ------------------------------------------------------------------------------
-    # COMPUTE IRF SIGN RESTRICTIONS, Author: Lapo Bini, lbini@ucsd.edu
+    # Compute IRF Sign Restrictions, Author: Lapo Bini, lbini@ucsd.edu
     # ------------------------------------------------------------------------------
 
     # Unpack and auxiliary variables 
@@ -37,6 +38,7 @@ function bvar_sign_gibbs(
 
     # Allocate results. I will save IRFs to all the shocks, not just the one of 
     # Interest to later compute other objects 
+    TR  = zeros(k, t, reps-burnin);
     PD  = zeros(H, k, reps-burnin);
     IRF = zeros(aux_t, k, reps-burnin, k);
     HIS = zeros(t, reps-burnin, n_shock); 
@@ -106,11 +108,15 @@ function bvar_sign_gibbs(
             jgibbs += 1
 
             # ----------------------------------------------------------------------
-            # 3 - Compute predictive density 
+            # 3 - Compute predictive density & Trend 
             # ----------------------------------------------------------------------
             if predictive_density
                 yₕ             = bvar_predictive_dens(k, H+1, t, lags, y, b, 𝛹)
                 PD[:,:,jgibbs] = view(yₕ, p+1:H+p, :)
+            end
+
+            if trend_variables
+                TR[:,:,jgibbs] = VAR_trend(b, x[1,1:end-1], t)
             end
 
             # ----------------------------------------------------------------------
@@ -220,6 +226,6 @@ function bvar_sign_gibbs(
         end
     end
 
-    return PD, IRF, HIS, valid_draw
+    return PD, IRF, HIS, TR, valid_draw
 
 end

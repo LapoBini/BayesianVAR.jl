@@ -4,14 +4,14 @@ function VAR_trend(
     t::Int
     )
 
-    n   = size(A, 2)            
-    lag = Int((size(A, 1)-1)/n)    
+    n    = size(A, 2)            
+    lags = Int((size(A, 1)-1)/n)    
 
     # Companion matrix F (12×12 here)
     F = [A[1:end-1,:]'; eye(n*(lags-1)) zeros(n*(lags-1), n)];
 
     # Constant in companion form (zero by default)
-    C = zeros(n*lag);  
+    C = zeros(n*lags);  
     C[1:n] = A[end,:]
 
     τₜ = zeros(eltype(A), n, t)

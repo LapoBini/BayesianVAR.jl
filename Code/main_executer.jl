@@ -15,5 +15,6 @@ bvar_main(data_path, start_date, end_date, results_folder,
           # length impulse response functions 
           years = 5,
           # If you want historical decomposition with sign restrictions
-          historical_decomp = ["GDP"; "INFL"] # (put seriesID from Legend table)
+          historical_decomp = ["GDP"; "INFL"], # (put seriesID from Legend table)
+          trend_variables   = true
 )

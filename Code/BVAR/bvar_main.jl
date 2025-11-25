@@ -118,14 +118,20 @@ function bvar_main(
                                      trend_variables    = trend_variables);
 
         # Documentation
+        valid_draw = Int.(valid_draw);
         println("BVAR > Documentation > Plot Structural IRFs")
-        plot_IRFs_bvar(IRF, data, H, name_s, pos_policy, base_frq, res_path);
+        plot_IRFs_bvar(IRF[:,:,valid_draw,:], data, H, name_s, pos_policy, base_frq, res_path);
 
         if !isempty(historical_decomp)
             println("BVAR > Documentation > Plot Historical Decomposition")
-            plot_HIST_bvar(IRF, HIS, data, H, name_s, p, pos_policy, base_frq, 
-                           results_folder, transf, ref_dates, historical_decomp,
-                           tickers)
+            plot_HIST_bvar(IRF[:,:,valid_draw,:], HIS[:,valid_draw,:], data, H, name_s, p, 
+                           pos_policy, base_frq, results_folder, transf, ref_dates, 
+                           historical_decomp, tickers)
+        end
+
+        if trend_variables
+            println("BVAR > Documentation > Plot Trend vs. Actual Series")
+            plot_TREND_bvar(TR[:,:,valid_draw], data, p, results_folder, ref_dates, tickers)
         end
     end
 
